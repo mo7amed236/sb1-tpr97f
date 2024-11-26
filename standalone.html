@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تتبع مصاريف المناديب</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+        @media screen {
+            .print-only { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        const { createRoot } = ReactDOM;
+        const { PlusCircle, User, Trash2, Plus, Printer, RefreshCcw } = lucide;
+
+        // Components
+        function DriverList({ drivers, onAddDriver, onDeleteDriver, onSelectDriver, selectedDriverId }) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">قائمة المناديب</h2>
+                        <button
+                            onClick={onAddDriver}
+                            className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                        >
+                            <PlusCircle size={20} />
+                            إضافة مندوب
+                        </button>
+                    </div>
+                    <div className="space-y-2">
+                        {drivers.map((driver) => (
+                            <div key={driver.id} className="flex items-center gap-2">
+                                <button
+                                    onClick={() => onSelectDriver(driver.id)}
+                                    className={\`flex-1 flex items-center gap-2 p-3 rounded-md text-right \${
+                                        selectedDriverId === driver.id
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    }\`}
+                                >
+                                    <User size={20} />
+                                    <span>{driver.name}</span>
+                                </button>
+                                <button
+                                    onClick={() => onDeleteDriver(driver.id)}
+                                    className="p-3 text-red-500 hover:text-red-700 rounded-md hover:bg-gray-100"
+                                    title="حذف المندوب"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function ExpenseTable({ driver, expenses, onAddRow, onDeleteRow, onUpdateExpense }) {
+            const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">كشف حساب {driver.name}</h2>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={onAddRow}
+                                className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                            >
+                                <Plus size={20} />
+                                إضافة صف
+                            </button>
+                            <button
+                                onClick={() => window.print()}
+                                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                            >
+                                <Printer size={20} />
+                                طباعة
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50">
+                                    <th className="border p-3 text-right">التاريخ</th>
+                                    <th className="border p-3 text-right">رقم المركبة</th>
+                                    <th className="border p-3 text-right">رقم العداد</th>
+                                    <th className="border p-3 text-right">البيان</th>
+                                    <th className="border p-3 text-right">المبلغ</th>
+                                    <th className="border p-3 text-center no-print">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {expenses.map((expense) => (
+                                    <tr key={expense.id} className="hover:bg-gray-50">
+                                        <td className="border p-3">
+                                            <input
+                                                type="date"
+                                                value={expense.date}
+                                                onChange={(e) => onUpdateExpense(expense.id, 'date', e.target.value)}
+                                                className="w-full bg-transparent"
+                                            />
+                                        </td>
+                                        <td className="border p-3">
+                                            <input
+                                                type="text"
+                                                value={expense.vehicleNumber}
+                                                onChange={(e) => onUpdateExpense(expense.id, 'vehicleNumber', e.target.value)}
+                                                className="w-full bg-transparent"
+                                            />
+                                        </td>
+                                        <td className="border p-3">
+                                            <input
+                                                type="text"
+                                                value={expense.odometerReading}
+                                                onChange={(e) => onUpdateExpense(expense.id, 'odometerReading', e.target.value)}
+                                                className="w-full bg-transparent"
+                                            />
+                                        </td>
+                                        <td className="border p-3">
+                                            <input
+                                                type="text"
+                                                value={expense.description}
+                                                onChange={(e) => onUpdateExpense(expense.id, 'description', e.target.value)}
+                                                className="w-full bg-transparent"
+                                            />
+                                        </td>
+                                        <td className="border p-3">
+                                            <input
+                                                type="number"
+                                                value={expense.amount}
+                                                onChange={(e) => onUpdateExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
+                                                className="w-full bg-transparent"
+                                            />
+                                        </td>
+                                        <td className="border p-3 text-center no-print">
+                                            <button
+                                                onClick={() => onDeleteRow(expense.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <Trash2 size={20} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-gray-50 font-bold">
+                                    <td colSpan={4} className="border p-3 text-right">
+                                        الإجمالي
+                                    </td>
+                                    <td className="border p-3 text-right">{total}</td>
+                                    <td className="border p-3 no-print"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function PrintView({ drivers, expenses }) {
+            const totalAllDrivers = Object.values(expenses).reduce(
+                (total, driverExpenses) =>
+                    total + driverExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+                0
+            );
+
+            return (
+                <div className="print-only p-8">
+                    <h1 className="text-3xl font-bold text-center mb-8">تقرير مصاريف المناديب</h1>
+                    {drivers.map((driver) => (
+                        <div key={driver.id} className="mb-8">
+                            <h2 className="text-2xl font-bold mb-4">كشف حساب {driver.name}</h2>
+                            <table className="w-full border-collapse mb-4">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="border p-3 text-right">التاريخ</th>
+                                        <th className="border p-3 text-right">رقم المركبة</th>
+                                        <th className="border p-3 text-right">رقم العداد</th>
+                                        <th className="border p-3 text-right">البيان</th>
+                                        <th className="border p-3 text-right">المبلغ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(expenses[driver.id] || []).map((expense) => (
+                                        <tr key={expense.id}>
+                                            <td className="border p-3">{expense.date}</td>
+                                            <td className="border p-3">{expense.vehicleNumber}</td>
+                                            <td className="border p-3">{expense.odometerReading}</td>
+                                            <td className="border p-3">{expense.description}</td>
+                                            <td className="border p-3">{expense.amount}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="bg-gray-50 font-bold">
+                                        <td colSpan={4} className="border p-3 text-right">
+                                            الإجمالي
+                                        </td>
+                                        <td className="border p-3 text-right">
+                                            {(expenses[driver.id] || []).reduce((sum, exp) => sum + exp.amount, 0)}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    ))}
+                    <div className="mt-8 pt-8 border-t-2">
+                        <h2 className="text-2xl font-bold text-center">
+                            الإجمالي الكلي لجميع المناديب: {totalAllDrivers}
+                        </h2>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App
+        function App() {
+            const [drivers, setDrivers] = useState(() => {
+                const saved = localStorage.getItem('drivers');
+                return saved ? JSON.parse(saved) : [];
+            });
+            
+            const [expenses, setExpenses] = useState(() => {
+                const saved = localStorage.getItem('expenses');
+                return saved ? JSON.parse(saved) : {};
+            });
+            
+            const [selectedDriverId, setSelectedDriverId] = useState(null);
+
+            // Save to localStorage whenever data changes
+            React.useEffect(() => {
+                localStorage.setItem('drivers', JSON.stringify(drivers));
+                localStorage.setItem('expenses', JSON.stringify(expenses));
+            }, [drivers, expenses]);
+
+            const handleAddDriver = () => {
+                const name = prompt('أدخل اسم المندوب');
+                if (name) {
+                    const newDriver = {
+                        id: Date.now().toString(),
+                        name,
+                    };
+                    setDrivers([...drivers, newDriver]);
+                    setExpenses({ ...expenses, [newDriver.id]: [] });
+                }
+            };
+
+            const handleDeleteDriver = (driverId) => {
+                if (window.confirm('هل أنت متأكد من حذف هذا المندوب وجميع مصاريفه؟')) {
+                    const newExpenses = { ...expenses };
+                    delete newExpenses[driverId];
+                    setExpenses(newExpenses);
+                    setDrivers(drivers.filter(d => d.id !== driverId));
+                    if (selectedDriverId === driverId) {
+                        setSelectedDriverId(null);
+                    }
+                }
+            };
+
+            const handleClearAll = () => {
+                if (window.confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
+                    setDrivers([]);
+                    setExpenses({});
+                    setSelectedDriverId(null);
+                    localStorage.clear();
+                }
+            };
+
+            const handleAddRow = (driverId) => {
+                const newExpense = {
+                    id: Date.now().toString(),
+                    date: new Date().toISOString().split('T')[0],
+                    vehicleNumber: '',
+                    odometerReading: '',
+                    description: '',
+                    amount: 0,
+                };
+                setExpenses({
+                    ...expenses,
+                    [driverId]: [...(expenses[driverId] || []), newExpense],
+                });
+            };
+
+            const handleDeleteRow = (driverId, expenseId) => {
+                setExpenses({
+                    ...expenses,
+                    [driverId]: expenses[driverId].filter((exp) => exp.id !== expenseId),
+                });
+            };
+
+            const handleUpdateExpense = (driverId, expenseId, field, value) => {
+                setExpenses({
+                    ...expenses,
+                    [driverId]: expenses[driverId].map((exp) =>
+                        exp.id === expenseId ? { ...exp, [field]: value } : exp
+                    ),
+                });
+            };
+
+            const selectedDriver = drivers.find((d) => d.id === selectedDriverId);
+
+            return (
+                <div className="min-h-screen bg-gray-100 p-6">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="no-print">
+                            <div className="flex justify-between items-center mb-8">
+                                <h1 className="text-3xl font-bold text-gray-800">
+                                    نظام تتبع مصاريف المناديب
+                                </h1>
+                                <button
+                                    onClick={handleClearAll}
+                                    className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                                >
+                                    <RefreshCcw size={20} />
+                                    مسح جميع البيانات
+                                </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="md:col-span-1">
+                                    <DriverList
+                                        drivers={drivers}
+                                        onAddDriver={handleAddDriver}
+                                        onDeleteDriver={handleDeleteDriver}
+                                        onSelectDriver={setSelectedDriverId}
+                                        selectedDriverId={selectedDriverId}
+                                    />
+                                </div>
+                                
+                                <div className="md:col-span-3">
+                                    {selectedDriver && (
+                                        <ExpenseTable
+                                            driver={selectedDriver}
+                                            expenses={expenses[selectedDriver.id] || []}
+                                            onAddRow={() => handleAddRow(selectedDriver.id)}
+                                            onDeleteRow={(expenseId) => handleDeleteRow(selectedDriver.id, expenseId)}
+                                            onUpdateExpense={(expenseId, field, value) =>
+                                                handleUpdateExpense(selectedDriver.id, expenseId, field, value)
+                                            }
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <PrintView drivers={drivers} expenses={expenses} />
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
